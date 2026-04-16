@@ -50,6 +50,10 @@ python kaggle/build_task.py
 python eval_harness/run_local.py --questions questions.jsonl --out results/runs/
 ```
 
+## Known gotchas
+
+- **Do NOT add `from __future__ import annotations` to `kaggle/build_task.py`'s TASK_TEMPLATE** — kbench's Score type inference fails on stringified `-> float` return annotations (PEP 563 makes all annotations strings, breaking `_infer_result_type` inside the SDK).
+
 ## Attribution
 
 Built by [Voicetree Lab](https://github.com/voicetreelab).

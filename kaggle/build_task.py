@@ -20,6 +20,10 @@ S4 must rename the evaluation_data column "class" -> "class_" before calling
 `.evaluate(...)` because Python cannot bind a keyword argument named `class`.
 """
 
+# DO NOT add `from __future__ import annotations` here — kbench's Score type
+# inference fails on stringified `-> float` return annotations (PEP 563 makes
+# all annotations strings at definition time, breaking isinstance checks inside
+# kaggle_benchmarks/tasks.py _infer_result_type).
 import base64
 import json as _json
 import sys
