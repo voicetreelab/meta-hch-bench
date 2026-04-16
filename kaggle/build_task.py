@@ -20,8 +20,6 @@ S4 must rename the evaluation_data column "class" -> "class_" before calling
 `.evaluate(...)` because Python cannot bind a keyword argument named `class`.
 """
 
-from __future__ import annotations
-
 import base64
 import json as _json
 import sys
