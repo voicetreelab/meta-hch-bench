@@ -31,6 +31,18 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional cap after filtering ids.",
     )
+    parser.add_argument(
+        "--questions-file",
+        type=Path,
+        default=QUESTIONS_PATH,
+        help="JSONL file to load rows from. Defaults to kaggle_submission/questions.jsonl.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=RESULTS_ROOT,
+        help="Directory to write per-model JSON results into. Defaults to kaggle_submission/results/runs.",
+    )
     return parser.parse_args()
 
 
@@ -99,8 +111,13 @@ def infer_feasible(evaluation: dict[str, Any]) -> bool:
 
 
 def infer_parse_path(result: dict[str, Any]) -> str:
-    error = str(result.get("error") or "").lower()
-    if "parse failed" in error:
+    parse_events = result.get("parse_events") or []
+    modes = [str(event.get("mode")) for event in parse_events]
+    if any(mode == "judge_rescue" for mode in modes):
+        return "judge_rescue"
+    if any(mode == "partial_rescue" for mode in modes):
+        return "partial_rescue"
+    if any(mode == "strict_parse_failed" for mode in modes):
         return "strict_parse_failed"
     if result.get("cf_parsed"):
         return "strict_protocol_cf"
@@ -133,7 +150,7 @@ def format_summary(payload: dict[str, Any]) -> str:
 
 def main() -> int:
     args = parse_args()
-    rows = load_rows(QUESTIONS_PATH)
+    rows = load_rows(args.questions_file)
     requested_ids = parse_requested_ids(args.ids)
     if requested_ids is None:
         selected = rows
@@ -148,7 +165,7 @@ def main() -> int:
         raise ValueError("no rows matched the requested ids")
 
     model_slug = slugify_model(args.model)
-    output_dir = RESULTS_ROOT / model_slug
+    output_dir = args.output_dir / model_slug
     output_dir.mkdir(parents=True, exist_ok=True)
 
     wall_times: list[float] = []

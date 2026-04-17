@@ -5,6 +5,15 @@ import subprocess
 from harness.protocol import PLAN_TURN_BUDGET_S, SUBTASK_BUDGET_S
 
 _TIMEOUT_CAP_S = max(PLAN_TURN_BUDGET_S, SUBTASK_BUDGET_S) + 30
+MODEL_MAX_TOKENS_FLAGS: dict[str, list[str]] = {
+    "claude-sonnet-4.6": ["--option", "max_tokens", "40000"],
+    "gemini-flash-latest": ["--option", "max_output_tokens", "40000"],
+    "gpt-5.4-mini": [],
+    "claude-opus-4.6": ["--option", "max_tokens", "40000"],
+    "gemini-3-pro-preview": ["--option", "max_output_tokens", "40000", "--option", "thinking_level", "low"],
+    "gpt-5.4": [],
+}
+MODELS_WITHOUT_TEMPERATURE: set[str] = {"gpt-5.4"}
 
 
 class LocalLLM:
@@ -20,11 +29,11 @@ class LocalLLM:
             self.model,
             "-s",
             self.system_prompt,
-            "--option",
-            "temperature",
-            format(float(temperature), "g"),
-            text,
         ]
+        if self.model not in MODELS_WITHOUT_TEMPERATURE:
+            cmd.extend(["--option", "temperature", format(float(temperature), "g")])
+        cmd.extend(MODEL_MAX_TOKENS_FLAGS.get(self.model, []))
+        cmd.append(text)
         try:
             completed = subprocess.run(
                 cmd,

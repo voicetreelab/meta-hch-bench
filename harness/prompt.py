@@ -8,11 +8,33 @@ from harness.protocol import CF_RESERVE_S, PLAN_TURN_BUDGET_S, SUBTASK_BUDGET_S,
 CLASS_DISPLAY_NAMES = {
     "cjs": "Coupled Job-Shop",
     "graphcol": "Graph Coloring",
+    "mbj": "Masked Block Job-Shop",
     "mwis": "Maximum Weighted Independent Set",
     "steiner": "Steiner x Coloring",
     "tsp": "Traveling Salesperson",
     "ve": "Bayesian Variable Elimination",
 }
+
+NO_MARKDOWN_WRAP_RULE = (
+    "Do NOT wrap `PLAN_STATE`, `NEXT_SUB`, `UPDATED_PLAN_STATE`, `DECISION`, `BEST_GUESS`, "
+    "`QUALITY_FORECAST`, or `CONTINUE_FORECAST` in markdown headers (`##`, `#`), bullets "
+    "(`-`, `*`), or code fences (```). Emit each as a literal line starting with `<LABEL>:` "
+    "followed by the value."
+)
+
+TURN1_ANTI_EXAMPLES = (
+    "CORRECT: PLAN_STATE: Start from the baseline...\n"
+    "WRONG:   ## PLAN_STATE\n"
+    "Start from the baseline...  (markdown header — will not parse)\n"
+    "WRONG:   - PLAN_STATE: Start from the baseline...   (bullet prefix — will not parse)"
+)
+
+EXEC_ANTI_EXAMPLES = (
+    "CORRECT: UPDATED_PLAN_STATE: Keep a valid structured answer at every turn.\n"
+    "WRONG:   ## UPDATED_PLAN_STATE\n"
+    "Keep a valid structured answer at every turn.  (markdown header — will not parse)\n"
+    'WRONG:   - BEST_GUESS: {"assignment": {"N01": 1, "N02": 2}}   (bullet prefix — will not parse)'
+)
 
 
 def build_system_prompt() -> str:
@@ -28,6 +50,10 @@ def build_system_prompt() -> str:
         "Protocol. You may decompose the problem into subtasks, revise your plan each turn, "
         "and stop when you judge no more work is worth its time cost. The harness extracts "
         "structured fields from your raw text, so when a field expects JSON, emit valid JSON.\n\n"
+        "Output budget. Your response is token-limited. Keep SUB_N sections under 30 lines — "
+        "key moves and result only. You MUST reach all structured fields "
+        "(BEST_GUESS, UPDATED_PLAN_STATE, QUALITY_FORECAST, CONTINUE_FORECAST, DECISION) "
+        "in every exec turn.\n\n"
         "Do not call tools. Do not write code, pseudocode, or solver sketches. Work only from "
         "the prompt, the running transcript, the current best artifact, and your own reasoning."
     )
@@ -39,7 +65,7 @@ def build_turn1_prompt(instance_nl: str, *, cls: str) -> str:
         f"Turn 1 for {CLASS_DISPLAY_NAMES.get(cls, cls)} is planning only. Do not emit "
         "BEST_GUESS yet.\n\n"
         "Emit, in order:\n"
-        "- `PLAN_STATE`: free-form plan. We will quote this back to you verbatim on every later turn.\n"
+        "- `PLAN_STATE`: plan (≤ 15 lines). We will quote this back to you verbatim on every later turn.\n"
         "- `NEXT_SUB`: `{id: 1, desc, p_solve, time_budget_s}`. `p_solve` is your probability "
         "that the final answer lands within the target gap after this subtask. `time_budget_s` "
         f"must be <= {SUBTASK_BUDGET_S}.\n\n"
@@ -48,7 +74,11 @@ def build_turn1_prompt(instance_nl: str, *, cls: str) -> str:
         "trying to produce a cleaner feasible answer.\n"
         'NEXT_SUB: {"id": 1, "desc": "Construct one improved feasible candidate", '
         '"p_solve": 0.35, "time_budget_s": 180}\n\n'
-        "Emit both labelled fields exactly once, in the listed order. Do not emit BEST_GUESS yet.\n\n"
+        f"{NO_MARKDOWN_WRAP_RULE}\n"
+        f"{TURN1_ANTI_EXAMPLES}\n\n"
+        "Emit both labelled fields exactly once, in the listed order. Failing to emit either "
+        "required field causes strict-parse failure, and no score is recorded for the turn. "
+        "Do not emit BEST_GUESS yet.\n\n"
         f"Planning budget: {PLAN_TURN_BUDGET_S}s."
     )
 
@@ -84,7 +114,7 @@ def build_exec_prompt(
         f"{timing_block}\n\n"
         f"{current_best_block}\n\n"
         f"Exec turn {turn_index}. Emit, in order:\n"
-        f"- `SUB_{turn_index - 1}`: reasoning/work for this subtask\n"
+        f"- `SUB_{turn_index - 1}`: key findings for this subtask — HARD LIMIT 30 lines. Stop writing SUB_{turn_index - 1} after 30 lines even if incomplete. BEST_GUESS and the remaining fields MUST follow.\n"
         f"- `BEST_GUESS`: class-specific JSON for `{cls}`\n"
         f"{schema_block}\n"
         "- `UPDATED_PLAN_STATE`: revised plan, or keep the prior plan verbatim\n"
@@ -104,8 +134,14 @@ def build_exec_prompt(
         'CONTINUE_FORECAST: {"p_improve": 0.35, "expected_delta_score": 1.8, "expected_gap_reduction": 4.0}\n'
         "DECISION: continue\n"
         f'NEXT_SUB: {{"id": {turn_index}, "desc": "Try one more improvement move", "p_solve": 0.3, "time_budget_s": 120}}\n\n'
+        f"{NO_MARKDOWN_WRAP_RULE}\n"
+        f"{EXEC_ANTI_EXAMPLES}\n\n"
         "All labelled fields must be emitted in the listed order. The `BEST_GUESS:` line must contain "
-        "valid JSON, with no code fences and no extra text inside that field."
+        "valid JSON, with no code fences and no extra text inside that field. Failing to emit any "
+        "of `BEST_GUESS`, `UPDATED_PLAN_STATE`, `QUALITY_FORECAST`, `CONTINUE_FORECAST`, "
+        "`DECISION`, or, when you continue, `NEXT_SUB` causes strict-parse failure, and no "
+        "score is recorded for the turn. Keep each field concise enough that you still emit the "
+        "full labelled output."
     )
 
 
@@ -169,6 +205,13 @@ def _timing_block(
 
 
 def _best_guess_schema_block(cls: str) -> str:
+    if cls == "portfolio":
+        return (
+            "- BEST_GUESS for `portfolio`: a single JSON object whose top-level keys are the "
+            "component problem_ids listed above, each mapped to an object obeying that "
+            "component's ANSWER SCHEMA block. Do not nest under an `answers` key."
+        )
+
     try:
         from verifiers import CLASS_TO_BEST_GUESS_SCHEMA
     except Exception:
