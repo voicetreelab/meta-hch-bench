@@ -66,10 +66,6 @@ Small-tier · frontier-tier separated by `·`; bold = positive-axis replication 
 
 ![Figure 6 — Per-lab bar chart](figure6-per-lab-bar-chart.png)
 
-**Submission proof (Kaggle AGI Metacognition track, 2026-04-17).**
-
-![Submission proof](submission_proof.png)
-
 ### Family-consistency verdict (closes the "one-model-per-family" critique)
 
 **Anthropic — monitoring axis CONFIRMED.** Both Sonnet and Opus post positive M2 BSS (+0.53 / +0.18) and low M4 MAE (~1.8); Opus *patches* Sonnet's execution collapse (33% → 82% feasibility) while preserving its monitoring advantage. "Knows what it will break — and fixes it at the frontier." **OpenAI — sharp-and-wrong-M2 CONFIRMED.** Both GPT-5.4-mini and GPT-5.4 sit at catastrophic M2 BSS (−2.14 / −3.17) with near-zero resolution; the sibling profile replicates across a full capability generation, and worsens at the frontier (M4 MAE 2.08 → 7.99) — a *metacog scaling regression*, unique to this family. **Google — flat-forecaster REJECTED at the frontier.** Gemini 3 Pro (56/56 complete, 100% feasibility) inverts Flash's profile (M2 BSS +0.50, resolution 0.11, M4 MAE 0.35). Flat-forecasting is a Flash-tier artifact, not a Google-family specialization.
