@@ -94,4 +94,4 @@ Voicetree — AI agent orchestration platform. Research conducted independently.
 
 ## References & Citations
 
-Full bibliography hosted in our public repository: **`github.com/voicetree-ai/metabench-evals/references.md`**. Core citations used in this writeup: Kadavath et al. (2022); Ackerman et al. (2025); Kirichenko et al. (2025); Laskov & Shafto (2024), "Beyond Bench"; Murphy (1973); Nelson & Narens (1990); Russell & Wefald (1991); Christiano et al. (2018); Huang et al. (2024); Wang & Zhao (2024); Shinn et al. (2023); Han et al. (2024); Snell et al. (2025); Li, Hendrycks et al. (2025).
+Full bibliography: **[github.com/voicetree-ai/metabench-evals/blob/main/references.md](https://github.com/voicetree-ai/metabench-evals/blob/main/references.md)**. Core citations used in this writeup: Kadavath et al. (2022); Ackerman et al. (2025); Kirichenko et al. (2025); Laskov & Shafto (2024), "Beyond Bench"; Murphy (1973); Nelson & Narens (1990); Russell & Wefald (1991); Christiano et al. (2018); Huang et al. (2024); Wang & Zhao (2024); Shinn et al. (2023); Han et al. (2024); Snell et al. (2025); Li, Hendrycks et al. (2025).
